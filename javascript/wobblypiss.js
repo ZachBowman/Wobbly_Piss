@@ -1,3 +1,7 @@
+// Wobbly Piss
+// 2014 Nightmare Games
+// Zach Bowman
+
 var canvas;
 var canvas_html;
 var preload;
@@ -22,6 +26,7 @@ var level_result = "none";
 var fade_opacity = 1.0;
 var fade_direction = "none";
 var big_beer_y = 305;
+var shit_yell = false;
 
 var origin_x = 160;
 var origin_y = 500;
@@ -259,16 +264,10 @@ function piss_object ()
 
   this.splatter = function ()
     {
-    var sound = 0;
+    //var sound = 0;
 
     // create delay in between water droplet sounds
     if (piss_sound_counter >= piss_sound_delay) piss_sound_counter = 0;
-    if (piss_sound_counter == 0)
-      {
-      piss_sound_counter = 0;
-      sound = Math.floor ((Math.random() * 6) + 1);
-      }
-    piss_sound_counter += 1;
 
     this.active = false;
     if (toilet_broken == false && close_enough (this.x, this.y, bullseye_x, bullseye_y, 50) == true)  // in the bowl!
@@ -276,12 +275,7 @@ function piss_object ()
       points += 7;
       if (water_opacity < 1.0) water_opacity += 0.003;
 
-           if (sound == 1) createjs.Sound.play ("sound_water_hit1");
-      else if (sound == 2) createjs.Sound.play ("sound_water_hit2");
-      else if (sound == 3) createjs.Sound.play ("sound_water_hit3");
-      else if (sound == 4) createjs.Sound.play ("sound_water_hit4");
-      else if (sound == 5) createjs.Sound.play ("sound_water_hit5");
-      else if (sound == 6) createjs.Sound.play ("sound_water_hit6");
+      if (piss_sound_counter == 0) play_sound ("drop water");
       }
     else if (toilet_broken == false && close_enough (this.x, this.y, bullseye_x, bullseye_y, 70) == true)  // on the seat
       {
@@ -295,23 +289,25 @@ function piss_object ()
       points -= 6;
       total_piss_on_floor += 1;
       create_puddle (this.x, this.y);
-      drop_floor_sound (sound);
+      if (piss_sound_counter == 0) play_sound ("drop floor");
       }
     else if (toilet_broken == false && close_enough (this.x, this.y, 160 - 85, 135 - 85, 170) == true)  // on the tank
       {
       points -= 7;
       total_piss_on_tank += 1;
       create_puddle (this.x, this.y);
-      drop_floor_sound (sound);
+      if (piss_sound_counter == 0) play_sound ("drop floor");
       }
     else if (this.y <= 220 && (wall_broken == false || close_enough (this.x, this.y, 100 + 75, 30 + 75, 75) == false))  // on the wall
       {
       points -= 8;
       total_piss_on_wall += 1;
       create_puddle (this.x, this.y);
-      drop_floor_sound (sound);
+      if (piss_sound_counter == 0) play_sound ("drop floor");
       }
     else points -= 6;                                                              // anywhere else
+
+    piss_sound_counter += 1;
     }
 
   this.check_active = function ()
@@ -331,15 +327,15 @@ var piss_drop = new Array();
 
 ////////////////////////////////////////////////////////////////////////////////
 
-function drop_floor_sound (sound)
-  {
-       if (sound == 1) createjs.Sound.play ("sound_floor_hit1");
-  else if (sound == 2) createjs.Sound.play ("sound_floor_hit2");
-  else if (sound == 3) createjs.Sound.play ("sound_floor_hit3");
-  else if (sound == 4) createjs.Sound.play ("sound_floor_hit4");
-  else if (sound == 5) createjs.Sound.play ("sound_floor_hit5");
-  else if (sound == 6) createjs.Sound.play ("sound_floor_hit6");
-  }
+// function drop_floor_sound (sound)
+  // {
+       // if (sound == 1) createjs.Sound.play ("sound_floor_hit1");
+  // else if (sound == 2) createjs.Sound.play ("sound_floor_hit2");
+  // else if (sound == 3) createjs.Sound.play ("sound_floor_hit3");
+  // else if (sound == 4) createjs.Sound.play ("sound_floor_hit4");
+  // else if (sound == 5) createjs.Sound.play ("sound_floor_hit5");
+  // else if (sound == 6) createjs.Sound.play ("sound_floor_hit6");
+  // }
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -474,29 +470,44 @@ function init()
     document.getElementById ("canvas_div").style.display = "none";
     return;
     }
-	//var manifest = [{id:"begin", src:"spacerocks/assets/mmhmm1.mp3"},
-	//	              {id:"break", src:"spacerocks/assets/water_hit1.mp3", data:6}];
 
-  var manifest = [{id:"sound_cough1",     src:"sounds/cough1.mp3"},
-                  {id:"sound_cough2",     src:"sounds/cough2.mp3"},
-                  {id:"sound_ew1",        src:"sounds/ew1.mp3"},
-                  {id:"sound_ew2",        src:"sounds/ew2.mp3"},
-                  {id:"sound_floor_hit1", src:"sounds/floor_hit1.mp3"},
-                  {id:"sound_floor_hit2", src:"sounds/floor_hit2.mp3"},
-                  {id:"sound_floor_hit3", src:"sounds/floor_hit3.mp3"},
-                  {id:"sound_floor_hit4", src:"sounds/floor_hit4.mp3"},
-                  {id:"sound_floor_hit5", src:"sounds/floor_hit5.mp3"},
-                  {id:"sound_floor_hit6", src:"sounds/floor_hit6.mp3"},
-                  {id:"sound_glug1",      src:"sounds/glug2.mp3"},
-                  {id:"sound_glug2",      src:"sounds/glug2.mp3"},
-                  {id:"sound_hmm1",       src:"sounds/hmm1.mp3"},
-                  {id:"sound_mmhmm1",     src:"sounds/mmhmm1.mp3"},
-                  {id:"sound_water_hit1", src:"sounds/water_hit1.mp3"},
-                  {id:"sound_water_hit2", src:"sounds/water_hit2.mp3"},
-                  {id:"sound_water_hit3", src:"sounds/water_hit3.mp3"},
-                  {id:"sound_water_hit4", src:"sounds/water_hit4.mp3"},
-                  {id:"sound_water_hit5", src:"sounds/water_hit5.mp3"},
-                  {id:"sound_water_hit6", src:"sounds/water_hit6.mp3"}];
+  var manifest = [
+                  {id:"sound_break_floor",  src:"sounds/break_floor.mp3"},
+                  {id:"sound_break_toilet", src:"sounds/break_toilet.mp3"},
+                  {id:"sound_break_wall",   src:"sounds/break_wall.mp3"},
+                  {id:"sound_cough1",       src:"sounds/cough1.mp3"},
+                  {id:"sound_cough2",       src:"sounds/cough2.mp3"},
+                  {id:"sound_ew1",          src:"sounds/ew1.mp3"},
+                  {id:"sound_ew2",          src:"sounds/ew2.mp3"},
+                  {id:"sound_explosion",    src:"sounds/explosion.mp3"},
+                  {id:"sound_floor_hit1",   src:"sounds/floor_hit1.mp3"},
+                  {id:"sound_floor_hit2",   src:"sounds/floor_hit2.mp3"},
+                  {id:"sound_floor_hit3",   src:"sounds/floor_hit3.mp3"},
+                  {id:"sound_floor_hit4",   src:"sounds/floor_hit4.mp3"},
+                  {id:"sound_floor_hit5",   src:"sounds/floor_hit5.mp3"},
+                  {id:"sound_floor_hit6",   src:"sounds/floor_hit6.mp3"},
+                  {id:"sound_glug1",        src:"sounds/glug2.mp3"},
+                  {id:"sound_glug2",        src:"sounds/glug2.mp3"},
+                  {id:"sound_hmm1",         src:"sounds/hmm1.mp3"},
+                  {id:"sound_mmhmm1",       src:"sounds/mmhmm1.mp3"},
+                  {id:"sound_mmhmm2",       src:"sounds/mmhmm2.mp3"},
+                  {id:"sound_shit1",        src:"sounds/shit1.mp3"},
+                  {id:"sound_shit2",        src:"sounds/shit2.mp3"},
+                  {id:"sound_shit3",        src:"sounds/shit3.mp3"},
+                  {id:"sound_uhoh1",        src:"sounds/uhoh1.mp3"},
+                  {id:"sound_uhoh2",        src:"sounds/uhoh2.mp3"},
+                  {id:"sound_water_hit1",   src:"sounds/water_hit1.mp3"},
+                  {id:"sound_water_hit2",   src:"sounds/water_hit2.mp3"},
+                  {id:"sound_water_hit3",   src:"sounds/water_hit3.mp3"},
+                  {id:"sound_water_hit4",   src:"sounds/water_hit4.mp3"},
+                  {id:"sound_water_hit5",   src:"sounds/water_hit5.mp3"},
+                  {id:"sound_water_hit6",   src:"sounds/water_hit6.mp3"},
+                  {id:"sound_woo1",         src:"sounds/woo1.mp3"},
+                  {id:"sound_yeah1",        src:"sounds/yeah1.mp3"},
+                  {id:"sound_yeah2",        src:"sounds/yeah2.mp3"},
+                  {id:"sound_yup1",         src:"sounds/yup1.mp3"},
+                  {id:"sound_zip3",         src:"sounds/zip3.mp3"},
+                  {id:"sound_zip4",         src:"sounds/zip4.mp3"}];
 
   preload = new createjs.LoadQueue();
   preload.installPlugin(createjs.Sound);
@@ -540,7 +551,8 @@ function doneLoading(event)
 function handleClick()
   {
 	canvas_html.onclick = null;
-	createjs.Sound.play ("sound_mmhmm1");
+	sound_play ("great");
+	//createjs.Sound.play ("sound_mmhmm1");
 	}
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -592,7 +604,7 @@ function update ()
     if (keydown.right && key_right == false)
       {
       key_right = true;
-      next_level();
+      //next_level();
       }
     else if (keydown.right == false && key_right == true) key_right = false;
 
@@ -668,66 +680,43 @@ function update ()
       {
       toilet_broken = true;
       notification.show (text_broketoilet);
+      //createjs.Sound.play ("sound_break_toilet");
+      play_sound ("break toilet");
       }
     if (toilet_broken == false && beer_level == 5 && seat_piss_warning + tank_piss_warning > 80)  // toilet break
       {
       toilet_broken = true;
       notification.show (text_broketoilet);
+      //createjs.Sound.play ("sound_break_toilet");
+      play_sound ("break toilet");
       }
     if (toilet_broken == true && wall_broken == false && beer_level == 5 && wall_piss_warning > 40)  // wall break
       {
       wall_broken = true;
       notification.show (text_brokewall);
+      //createjs.Sound.play ("sound_break_wall");
+      play_sound ("break wall");
       }
     if (toilet_broken == true && floor_broken == false && beer_level == 5 && floor_piss_warning > 55)  // floor break
       {
       floor_broken = true;
       notification.show (text_brokefloor);
+      //createjs.Sound.play ("sound_break_floor");
+      play_sound ("break floor");
       }
 
     update_notification();
-    // // update notification
-    // if (notification.check_active() == true) notification.update();
-    // if (total_piss_on_wall >= wall_piss_warning)// && wall_broken == false)
-      // {
-      // total_piss_on_wall = 0;
-      // if (warning_chooser() == false)
-        // {
-        // wall_piss_warning += 5;
-        // notification.show (text_wall);
-        // total_warnings += 1;
-        // }
-      // }
-    // if (toilet_broken == false && total_piss_on_tank >= tank_piss_warning)
-      // {
-      // total_piss_on_tank = 0;
-      // if (warning_chooser() == false)
-        // {
-        // tank_piss_warning += 5;
-        // notification.show (text_tank);
-        // total_warnings += 1;
-        // }
-      // }
-    // if (total_piss_on_floor >= floor_piss_warning)// && floor_broken == false)
-      // {
-      // total_piss_on_floor = 0;
-      // if (warning_chooser() == false)
-        // {
-        // floor_piss_warning += 5;
-        // notification.show (text_floor);
-        // total_warnings += 1;
-        // }
-      // }
-    // if (toilet_broken == false && total_piss_on_seat >= seat_piss_warning)
-      // {
-      // total_piss_on_seat = 0;
-      // if (warning_chooser() == false)
-        // {
-        // seat_piss_warning += 5;
-        // notification.show (text_seat);
-        // total_warnings += 1;
-        // }
-      // }
+
+    if (beer_level == 5 && total_piss > piss_level_limit * 0.97 && shit_yell === false)
+      {
+      shit_yell = true;
+
+      play_sound ("panic");
+      // s = Math.floor (Math.random() * 3);
+           // if (s == 0) createjs.Sound.play ("sound_shit1");
+      // else if (s == 0) createjs.Sound.play ("sound_shit2");
+      // else createjs.Sound.play ("sound_shit3");
+      }
 
     // check for end of level
     if (total_piss >= piss_level_limit)
@@ -747,6 +736,7 @@ function update ()
         end_text5.reset();
         white_opacity = 1.0;
         explosion_opacity = 1.0;
+        createjs.Sound.stop();
         }
 
       else if (delay_counter >= level_result_delay && level_result == "none")
@@ -759,30 +749,42 @@ function update ()
           {
           if (r == 0) level_result = "great job";
           else level_result = "way to go";
-      		createjs.Sound.play ("sound_mmhmm1");
+
+          play_sound ("great");
+          // s = Math.floor (Math.random() * 2);
+          // if (s == 0) createjs.Sound.play ("sound_mmhmm1");
+          // else createjs.Sound.play ("sound_mmhmm2");
           }
         else if (points > previous_points + 500)
           {
           if (r == 0) level_result = "uh";
           else level_result = "hygenic";
           
-          s = Math.floor (Math.random() * 3);
-          if (s == 0) createjs.Sound.play ("sound_cough1");
-          else if (s == 1) createjs.Sound.play ("sound_cough2");
-          else createjs.Sound.play ("sound_hmm1");
+          play_sound ("good");
+          // s = Math.floor (Math.random() * 3);
+          // if (s == 0) createjs.Sound.play ("sound_cough1");
+          // else if (s == 1) createjs.Sound.play ("sound_cough2");
+          // else createjs.Sound.play ("sound_hmm1");
           }
         else if (points > previous_points - 500)
           {
           if (r == 0) level_result = "no one";
           else level_result = "problem";
 
-          if (Math.floor (Math.random() * 2) == 0) createjs.Sound.play ("sound_ew1");
-          else createjs.Sound.play ("sound_ew2");
+          play_sound ("ok");
+          // s = Math.floor (Math.random() * 2);
+          // if (s == 0) createjs.Sound.play ("sound_ew1");
+          // else createjs.Sound.play ("sound_ew2");
           }
         else
           {
           if (r == 0) level_result = "what the hell";
           else level_result = "public pool";
+
+          play_sound ("bad");
+          // s = Math.floor (Math.random() * 2);
+          // if (s == 0) createjs.Sound.play ("sound_uhoh1");
+          // else createjs.Sound.play ("sound_uhoh2");
           }
         }
       if (delay_counter >= level_end_delay && level_result != "none")
@@ -833,6 +835,8 @@ function update ()
         {
         end_counter = 0;
         end_sequence += 1;
+        //if (end_sequence == 1) createjs.Sound.play ("sound_explosion");
+        if (end_sequence == 1) play_sound ("explosion");
         }
       }
 
@@ -914,7 +918,8 @@ function update ()
           {
           next_level();
           game_state = "beer";
-          createjs.Sound.play ("sound_glug2");
+          //createjs.Sound.play ("sound_glug2");
+          play_sound ("glug");
           }
         else if (game_state == "end1")
           {
@@ -935,15 +940,8 @@ function update ()
         }
       }
     }
-
-  //sound_counter += 1;
-  //if (sound_counter >= sound_delay)
-    //{
-    //sound_counter = 0;
-    //createjs.Sound.play ("break");   
-    //}
   }
-
+  
 ////////////////////////////////////////////////////////////////////////////////
 
 function update_notification ()
@@ -1133,6 +1131,7 @@ function next_level ()
   toilet_broken = false;
   floor_broken = false;
   wall_broken = false;
+  shit_yell = false;
   notification.reset();
 
   for (var p = 0; p < max_puddles; p += 1)
@@ -1400,7 +1399,11 @@ function draw ()
   //if (pointer_down)  str += " down";
   //if (!pointer_down) str += " up";
 
+  // piss sound counter
+  //var str = "piss_sound_counter: " + piss_sound_counter;
+
   // draw text at center, max length to fit on canvas
+  //canvas_2d.globalAlpha = 1.0;
   //canvas_2d.fillStyle = "#0000FF";
   //canvas_2d.font = "18pt Helvetica";
   //canvas_2d.fillText (str, 10, 440);
