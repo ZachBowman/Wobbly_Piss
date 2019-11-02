@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<title>Wobbly Piss!</title>
+
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name ="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta charset="utf-8"/>
+
+<script language="javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min.js" type="text/javascript"></script>
+<script language="javascript" src="javascript/jquery.hotkeys.js" type="text/javascript"></script>
+<script language="javascript" src="javascript/key_status.js" type="text/javascript"></script>
+<script language="javascript" src="javascript/sprite.js" type="text/javascript"></script>
+<script language="javascript" src="javascript/sound.js" type="text/javascript"></script>
+
+<style>
+
+  @font-face
+    {
+    font-family: impact;
+    src: local(impact), url('Impact.ttf') format('opentype');
+    }
+
+  body
+    {
+    background-color: black;
+    color: white;
+    margin: 0;
+    padding: 0;
+    //-ms-touch-action: none;
+    }
+    
+  canvas
+    {
+    image-rendering: optimizeSpeed;
+    margin: 0px;
+    padding: 0px;
+    border: 0px;
+    //width: 100%
+    //height: 100%
+    }
+
+  //div.canvas_div
+    //{
+    //margin: 0px;
+    //padding: 0px;
+    //border: 0px;
+    //}
+
+</style>
+</head>
+
+<body onload = "init()">
+
+<div class="canvas_div">
+  <canvas width="320" height="480" id="canvas"></canvas>
+</div>
+  
+<script type='text/javascript'>
+
+var screen_width = 320;
+var screen_height = 480;
+var boundary = 50;
+var fps = 30;
+
+var piss_start = false;
+var pointer_down = false;
+var beer_level = 0;
+var points = 0;
+var previous_points = 0;
+var game_state = "title";
+var delay_counter = 0;
+var level_end_delay = 75;
+var level_result_delay = 50;
+var level_result = "none";
+var fade_opacity = 1.0;
+var fade_direction = "in";
+var big_beer_y = 305;
+
+var origin_x = 160;
+var origin_y = 500;
+var bullseye_x = 160;
+var bullseye_y = 295;
+var main_target_x = bullseye_x;
+var main_target_y = bullseye_y;
+
+var piss_wobble = 1;
+var target_wobble = 1;
+var wobble_target_x_diff = 0;
+var wobble_target_y_diff = 0;
+var wobble_target_x_velocity = 0;
+var wobble_target_y_velocity = 0;
+var wobble_targe_max_velocity = 1;
+var wobble_target_delay = 100;
+var wobble_target_counter = 0;
+var screen_wobble = 0;
+var screen_x_offset = 0;
+var screen_y_offset = 0;
+var water_opacity = 0.0;
+
+var key_right = false;
+
+var title_screen        = Sprite ("title3");
+var beermug_sprite      = Sprite ("beermug2");
+var toilet_sprite       = Sprite ("toilet4");
+var yellow_water_sprite = Sprite ("yellow_water");
+var black_sprite        = Sprite ("black");
+var red_sprite          = Sprite ("red");
+var big_mug_sprite      = Sprite ("beermug_empty2");
+var big_beer_sprite     = Sprite ("beer2");
+
+var text_seat  = Sprite ("text_seat2");
+var text_floor = Sprite ("text_floor2");
+var text_tank  = Sprite ("text_tank2");
+var text_wall  = Sprite ("text_wall2");
+var text_everywhere   = Sprite ("text_everywhere2");
+var text_outofcontrol = Sprite ("text_outofcontrol2");
+var text_asshole      = Sprite ("text_asshole2");
+var text_pissingoff   = Sprite ("text_pissingoff2");
+var result_greatjob   = Sprite ("result_greatjob2");
+var result_waytogo    = Sprite ("result_waytogo2");
+var result_uh         = Sprite ("result_uh2");
+var result_hygenic    = Sprite ("result_hygenic2");
+
+function notification_object ()
+  { 
+  this.active = false;
+  this.x = 35;
+  this.y = 385;
+  this.sprite = text_seat;
+  this.delay = 100;
+  this.counter = 0;
+
+  this.reset = function ()
+    {
+    this.active = false;
+    }
+    
+  this.show = function (new_sprite)
+    {
+    this.active = true;
+    this.sprite = new_sprite;
+    this.counter = 0;
+    }
+
+  this.update = function ()
+    {
+    if (this.active == true)
+      {
+      this.counter += 1;
+      if (this.counter >= this.delay) this.active = false;
+      }
+    }
+
+  this.check_active = function ()
+    {
+    return this.active;
+    }
+
+  this.draw = function ()
+    {
+    this.sprite.draw (canvas, this.x, this.y);
+    }
+  }
+
+notification = new notification_object();
+
+////////////////////////////////////////////////////////////////////////////////
+
+var piss_level_limit = 300;
+var total_piss = 0;
+var total_piss_on_seat = 0;
+var total_piss_on_floor = 0;
+var total_piss_on_tank = 0;
+var total_piss_on_wall = 0;
+var seat_piss_warning = 40;
+var floor_piss_warning = 40;
+var tank_piss_warning = 40;
+var wall_piss_warning = 40;
+var warning_everywhere = false;
+var warning_control = false;
+var warning_asshole = false;
+var total_warnings = 0;
+
+var piss_drop = [];
+var max_drops = 50;
+var total_drops_in_array = 0;
+var piss_delay = 2;
+var piss_delay_counter = 0;
+var piss_cycle = 0;
+
+function piss_object (p)
+  {
+  p.active = true;
+  p.x = origin_x;
+  p.y = origin_y;
+  p.speed = 8;
+  p.x_velocity = 0;
+  p.y_velocity = -p.speed;
+  p.sprite = Sprite ("piss_drop3");
+  p.target_x = main_target_x + Math.floor ((Math.random() * ((piss_wobble * 2) + 1)) - piss_wobble) + wobble_target_x_diff;
+  p.target_y = main_target_y + Math.floor ((Math.random() * ((piss_wobble * 2) + 1)) - piss_wobble) + wobble_target_y_diff;
+  p.direction = get_direction (p.x, p.y, p.target_x, p.target_y);
+  p.x_velocity = p.speed * Math.cos (p.direction);
+  p.y_velocity = p.speed * Math.sin (p.direction);
+
+  p.activate = function()
+    {
+    p.active = true;
+    p.x = origin_x;
+    p.y = origin_y;
+    p.x_velocity = 0;
+    p.y_velocity = -p.speed;
+    p.target_x = main_target_x + Math.floor ((Math.random() * ((piss_wobble * 2) + 1)) - piss_wobble) + wobble_target_x_diff;
+    p.target_y = main_target_y + Math.floor ((Math.random() * ((piss_wobble * 2) + 1)) - piss_wobble) + wobble_target_y_diff;
+    p.direction = get_direction (p.x, p.y, p.target_x, p.target_y);
+    p.x_velocity = p.speed * Math.cos (p.direction);
+    p.y_velocity = p.speed * Math.sin (p.direction);
+    }
+
+  p.in_boundary = function()
+    {
+    if (p.x >= 0 - boundary && p.x <= screen_width + boundary
+        && p.y >= 0 - boundary && p.y <= screen_height + boundary) return true;
+    else return false;
+    }
+
+  p.draw = function()
+    {
+    p.sprite.draw (canvas, p.x - 6, p.y - 9);
+    }
+
+  p.update = function()
+    {
+    p.x += p.x_velocity;
+    p.y += p.y_velocity;
+    if (close_enough (p.x, p.y, p.target_x, p.target_y, 5) == true) p.splatter();   // hit assigned target
+    else if (p.active == true && p.in_boundary == false) p.splatter();              // out of bounds
+    }
+
+  p.splatter = function()
+    {
+    p.active = false;
+    if (close_enough (p.x, p.y, bullseye_x, bullseye_y, 50) == true)               // in the bowl!
+      {
+      points += 7;
+      if (water_opacity < 1.0) water_opacity += 0.003;
+      }
+    else if (close_enough (p.x, p.y, bullseye_x, bullseye_y, 70) == true)          // on the seat
+      {
+      points -= 5;
+      total_piss_on_seat += 1;
+      }
+    else if (p.y > 220)                                                            // on the floor
+      {
+      points -= 6;
+      total_piss_on_floor += 1;
+      }
+    else if (close_enough (p.x, p.y, 160 - 85, 135 - 85, 170) == true)             // on the tank
+      {
+      points -= 7;
+      total_piss_on_tank += 1;
+      }
+    else if (p.y <= 220)                                                           // on the wall
+      {
+      points -= 8;
+      total_piss_on_wall += 1;
+      }
+    else points -= 6;                                                              // anywhere else
+    }
+
+  p.check_active = function()
+    {
+    return p.active;
+    }
+
+  return p;
+  }
+
+////////////////////////////////////////////////////////////////////////////////
+
+puddle = [];
+max_puddles = 50;
+total_puddles = 0;
+
+function puddle_object (p)
+  {
+  p.x = 0;
+  p.y = 0;
+  }
+
+////////////////////////////////////////////////////////////////////////////////
+
+function init()
+  {
+  canvas = document.getElementById ("canvas").getContext ("2d");
+  canvas_html = document.getElementById ("canvas");
+
+  document.ontouchmove = function (e) {e.preventDefault()};
+
+  //canvas_html.addEventListener ("touchstart", finger_down, false);
+  //canvas_html.addEventListener ("touchmove", finger_move, true);
+  //canvas_html.addEventListener ("touchend", finger_up, false);
+  //document.body.addEventListener("touchcancel", finger_up, false);
+  }
+
+////////////////////////////////////////////////////////////////////////////////
+
+setInterval (function()
+  {
+  update();
+  draw();
+  }, 1000/fps);
+
+////////////////////////////////////////////////////////////////////////////////
+
+function update()
+  {
+  var r;  // random number
+  
+  if (game_state == "game")
+    {
+    // cheat
+    if (keydown.right && key_right == false)
+      {
+      key_right = true;
+      next_level();
+      }
+    else if (keydown.right == false && key_right == true) key_right = false;
+    
+    if (piss_start == true && total_piss < piss_level_limit)
+      {
+      piss_delay_counter += 1;
+      if (piss_delay_counter >= piss_delay)
+        {
+        piss_delay_counter = 0;
+        create_droplet();
+        }
+      }
+
+    // update droplets
+    for (var d = 0; d < total_drops_in_array; d += 1)
+      {
+      if (piss_drop[d].check_active()) piss_drop[d].update();
+      }
+
+    // update wobble target
+    wobble_target_x_diff += wobble_target_x_velocity;
+    wobble_target_y_diff += wobble_target_y_velocity;
+    wobble_target_counter += 1;
+    if (wobble_target_counter >= wobble_target_delay
+        || wobble_target_x_diff > target_wobble
+        || wobble_target_x_diff < -target_wobble
+        || wobble_target_y_diff > target_wobble
+        || wobble_target_y_diff < -target_wobble)
+      {
+      wobble_target_counter = 0;
+      wobble_target_x_velocity = Math.floor ((Math.random() * ((wobble_target_max_velocity * 2) + 1)) - wobble_target_max_velocity) / 10;
+      wobble_target_y_velocity = Math.floor ((Math.random() * ((wobble_target_max_velocity * 2) + 1)) - wobble_target_max_velocity) / 10;
+      }
+      
+    // update screen wobble
+    if (screen_wobble > 0 && total_piss < piss_level_limit)
+      {
+      screen_x_offset = Math.floor ((Math.random() * screen_wobble) + 1 - (screen_wobble / 2));
+      screen_y_offset = Math.floor ((Math.random() * screen_wobble) + 1 - (screen_wobble / 2));
+      }
+
+    // update notification
+    if (notification.check_active() == true) notification.update();
+    //if (warning_asshole == false && beer_level >= 3 && total_warnings > 4)
+    //  {
+    //  notification.show (text_outofcontrol);
+    //  warning_control = true;
+    //  total_warnings += 1;
+    //  }
+    //if (warning_control == false && beer_level >= 3 && total_warnings > 3)
+    //  {
+    //  notification.show (text_outofcontrol);
+    //  warning_control = true;
+    //  total_warnings += 1;
+    //  }
+    //else if (warning_everywhere == false && seat_piss_warning > 40 && floor_piss_warning > 40 && tank_piss_warning > 40 && wall_piss_warning > 40)
+    //  {
+    //  notification.show (text_everywhere);
+    //  warning_everywhere = true;
+    //  total_warnings += 1;
+    //  }
+    if (total_piss_on_wall >= wall_piss_warning)
+      {
+      total_piss_on_wall = 0;
+      if (warning_chooser() == false)
+        {
+        wall_piss_warning += 5;
+        notification.show (text_wall);
+        total_warnings += 1;
+        }
+      }
+    if (total_piss_on_tank >= tank_piss_warning)
+      {
+      total_piss_on_tank = 0;
+      if (warning_chooser() == false)
+        {
+        tank_piss_warning += 5;
+        notification.show (text_tank);
+        total_warnings += 1;
+        }
+      }
+    if (total_piss_on_floor >= floor_piss_warning)
+      {
+      total_piss_on_floor = 0;
+      if (warning_chooser() == false)
+        {
+        floor_piss_warning += 5;
+        notification.show (text_floor);
+        total_warnings += 1;
+        }
+      }
+    if (total_piss_on_seat >= seat_piss_warning)
+      {
+      total_piss_on_seat = 0;
+      if (warning_chooser() == false)
+        {
+        seat_piss_warning += 5;
+        notification.show (text_seat);
+        total_warnings += 1;
+        }
+      }
+
+    // check for end of level
+    if (total_piss >= piss_level_limit)
+      {
+      delay_counter += 1;
+      if (delay_counter >= level_result_delay && level_result == "none")
+        {
+        notification.reset();
+        delay_counter = 0;
+        r = Math.floor (Math.random() * 2);
+        if (points > previous_points)
+          {
+          if (r == 0) level_result = "great job";
+          else level_result = "way to go";
+          }
+        else
+          {
+          if (r == 0) level_result = "uh";
+          else level_result = "hygenic";
+          }
+        }
+      if (delay_counter >= level_end_delay && level_result != "none")
+        {
+        fade_direction = "out";
+        //next_level();
+        //game_state = "beer";
+        }
+      }
+    }
+    
+  else if (game_state == "beer")
+    {
+    if (big_beer_y < 480) big_beer_y += .4;
+    }
+
+  // update_fade
+  if (fade_direction != "none")
+    {
+    if (fade_direction == "in")
+      {
+      fade_opacity -= 0.02;
+      if (fade_opacity <= 0)
+        {
+        fade_direction = "none";
+        }
+      }
+    else if (fade_direction == "out")
+      {
+      fade_opacity += 0.02;
+      if (fade_opacity >= 1.0)
+        {
+        fade_direction = "in";
+        if (game_state == "title" || game_state == "game")
+          {
+          next_level();
+          game_state = "beer";
+          }
+        }
+      }
+    }
+  }
+
+////////////////////////////////////////////////////////////////////////////////
+
+function warning_chooser ()
+  {
+  var choice = false;
+  
+  if (warning_asshole == false
+      && beer_level >= 3
+      && total_warnings > 4)
+    {
+    notification.show (text_asshole);
+    warning_asshole = true;
+    total_warnings += 1;
+    choice = true;
+    }
+  else if (warning_control == false
+           && beer_level >= 3
+           && total_warnings > 3)
+    {
+    notification.show (text_outofcontrol);
+    warning_control = true;
+    total_warnings += 1;
+    choice = true;
+    }
+  else if (warning_everywhere == false && total_warnings > 2)
+    {
+    notification.show (text_everywhere);
+    warning_everywhere = true;
+    total_warnings += 1;
+    choice = true;
+    }
+  return choice;
+  }
+
+////////////////////////////////////////////////////////////////////////////////
+
+function create_droplet ()
+  {
+  if (total_drops_in_array <= max_drops)  // make the array longer, up to the max
+    {
+    piss_drop.push (piss_object({}));
+    piss_drop[total_drops_in_array].activate();
+    total_drops_in_array += 1;
+    total_piss += 1;
+    //piss_cycle += 1;
+    //if (piss_cycle >= total_piss) piss_cycle = 0;
+    }
+  else  // use the next drop in order, sequentially
+    {
+    piss_drop[piss_cycle].activate();
+    total_piss += 1;
+    piss_cycle += 1;
+    if (piss_cycle >= total_drops_in_array) piss_cycle = 0;
+    }
+  }
+
+////////////////////////////////////////////////////////////////////////////////
+
+// crappy distance checker, does not slow game down
+function close_enough (x1, y1, x2, y2, distance)
+  {
+  if (x1 > x2 - distance && x1 < x2 + distance
+      && y1 > y2 - distance && y1 < y2 + distance) return true;
+  else return false;
+  }
+
+////////////////////////////////////////////////////////////////////////////////
+
+// SLOWS DOWN GAME LIKE HELL!
+function get_distance (x1, y1, x2, y2)
+  {
+  var h, x, y;
+
+  x = x2 - x1;
+  y = y2 - y1;
+  h = Math.sqrt ((x * x) + (y * y));
+
+  if (h < 0) h = h * -1;  // absolute value
+
+  return h;
+  }
+
+////////////////////////////////////////////////////////////////////////////////
+
+function get_direction (x1, y1, x2, y2)
+  {
+  var dir_radians;
+  var x_distance, y_distance;
+
+  x_distance = x2 - x1;
+  y_distance = y2 - y1;
+
+  // get radians of direction
+  if (x_distance > 0 && y_distance >= 0) dir_radians = Math.atan (y_distance / x_distance);
+  else if (x_distance > 0 && y_distance < 0) dir_radians = Math.atan (y_distance / x_distance) + (2 * Math.PI);
+  else if (x_distance < 0) dir_radians = Math.atan (y_distance / x_distance) + Math.PI;
+  else if (x_distance == 0 && y_distance > 0) dir_radians = 90 * Math.PI / 180;
+  else if (x_distance == 0 && y_distance < 0) dir_radians = 270 * Math.PI / 180;
+  else dir_radians = 0;  // x_distance = 0, y_distance = 0
+
+  return dir_radians;
+  }
+
+////////////////////////////////////////////////////////////////////////////////
+
+function next_level ()
+  {
+  beer_level += 1;
+  if (beer_level > 5) beer_level = 1;
+  
+  total_piss = 0;
+  delay_counter = 0;
+  wobble_target_x_diff = 0;
+  wobble_target_y_diff = 0;
+  wobble_target_x_velocity = 0;
+  wobble_target_y_velocity = 0;
+  total_piss_on_seat = 0;
+  total_piss_on_floor = 0;
+  total_piss_on_tank = 0;
+  total_piss_on_wall = 0;
+  piss_cycle = 0;
+  seat_piss_warning = 40;
+  floor_piss_warning = 40;
+  tank_piss_warning = 40;
+  wall_piss_warning = 40;
+  warning_everywhere = false;
+  warning_control = false;
+  warning_asshole = false;
+  total_warnings = 0;
+  previous_points = points;
+  water_opacity = 0.0;
+  level_result = "none";
+  big_beer_y = 305;
+  notification.reset();
+
+  if (beer_level == 1)
+    {
+    piss_level_limit = 350;
+    piss_wobble = 2;
+    target_wobble = 5;
+    wobble_target_max_velocity = 0;
+    screen_wobble = 0;
+    }
+  else if (beer_level == 2)
+    {
+    piss_level_limit = 550;
+    piss_wobble = 10;
+    target_wobble = 75;
+    wobble_target_max_velocity = 5;
+    screen_wobble = 0;
+    }
+  else if (beer_level == 3)
+    {
+    piss_level_limit = 700;
+    piss_wobble = 20;
+    target_wobble = 150;
+    wobble_target_max_velocity = 10;
+    screen_wobble = 1;
+    }
+  else if (beer_level == 4)
+    {
+    piss_level_limit = 850;
+    piss_wobble = 60;
+    target_wobble = 200;
+    wobble_target_max_velocity = 15;
+    screen_wobble = 2;
+    }
+  else if (beer_level == 5)
+    {
+    piss_level_limit = 1000;
+    piss_wobble = 120;
+    target_wobble = 250;
+    wobble_target_max_velocity = 20;
+    screen_wobble = 4;
+    }
+  }
+
+////////////////////////////////////////////////////////////////////////////////
+
+function draw ()
+  {
+  if (game_state == "title")
+    {
+    title_screen.draw (canvas, 0, 0);
+    canvas.fillStyle = "#FFFF00";
+    canvas.font = "24px impact";
+    canvas.fillText("CLICK TO PLAY", 90, 225);
+    }
+  else if (game_state == "beer")
+    {
+    // white background
+    canvas.fillStyle = "#FFFFFF";
+    canvas.rect (0, 0, screen_width, screen_height);
+    canvas.fill();
+    
+    // beer mugs
+    if (beer_level == 1) beermug_sprite.draw (canvas, 110, 130);
+    else if (beer_level == 2)
+      {
+      beermug_sprite.draw (canvas,  80, 130);
+      beermug_sprite.draw (canvas, 140, 130);
+      }
+    else if (beer_level == 3)
+      {
+      beermug_sprite.draw (canvas,  50, 130);
+      beermug_sprite.draw (canvas, 110, 130);
+      beermug_sprite.draw (canvas, 170, 130);
+      }
+    else if (beer_level == 4)
+      {
+      beermug_sprite.draw (canvas,  80,  60);
+      beermug_sprite.draw (canvas, 140,  60);
+      beermug_sprite.draw (canvas,  80, 130);
+      beermug_sprite.draw (canvas, 140, 130);
+      }
+    else if (beer_level == 5)
+      {
+      beermug_sprite.draw (canvas,  50,  60);
+      beermug_sprite.draw (canvas, 110,  60);
+      beermug_sprite.draw (canvas, 170,  60);
+      beermug_sprite.draw (canvas,  80, 130);
+      beermug_sprite.draw (canvas, 140, 130);
+      }
+
+    big_beer_sprite.draw (canvas, 107, big_beer_y);
+    big_mug_sprite.draw  (canvas,  65, 340);
+    
+    // text
+    canvas.fillStyle = "#000000";
+    canvas.font = "26px impact";
+    canvas.fillText("CLICK TO START", 80, 60);
+    canvas.fillText("BEER " + beer_level, 120, 260);
+    }
+  else if (game_state == "game")
+    {
+    toilet_sprite.draw (canvas, screen_x_offset, screen_y_offset);
+    canvas.globalAlpha = water_opacity;
+    yellow_water_sprite.draw (canvas, 115 + screen_x_offset, 258 + screen_y_offset);
+    canvas.globalAlpha = 1.0;
+  
+    // points
+    canvas.fillStyle = "#FFFFFF";
+    canvas.font = "26px impact";
+    canvas.fillText("POINTS:  " + points, 90, 35);
+  
+    // level
+    canvas.fillStyle = "#FFFF00";
+    canvas.font = "20px impact";
+    canvas.fillText ("LEVEL", 12, 21);
+    canvas.font = "26px impact";
+    canvas.fillText (beer_level, 25, 50);
+
+    // bullseye
+    //canvas.fillStyle = "#FF0000";
+    //canvas.strokeStyle = "#FF0000";
+    //canvas.beginPath();
+    //canvas.arc (bullseye_x, bullseye_y, 10, 0, Math.PI * 2, false); 
+    //canvas.closePath();
+    //canvas.fill();
+
+    // main target
+    //canvas.fillStyle = "#00FF00";
+    //canvas.strokeStyle = "#00FF00";
+    //canvas.beginPath();
+    //canvas.arc (main_target_x, main_target_y, 10, 0, Math.PI * 2, false); 
+    //canvas.closePath();
+    //canvas.fill();
+
+    // wobble target
+    //canvas.fillStyle = "#0000FF";
+    //canvas.strokeStyle = "#0000FF";
+    //canvas.beginPath();
+    //canvas.arc (main_target_x + wobble_target_x_diff, main_target_y + wobble_target_y_diff, 10, 0, Math.PI * 2, false); 
+    //canvas.closePath();
+    //canvas.fill();
+
+    // bullseye square
+    //canvas.strokeStyle = "#FF0000";
+    //canvas.rect (bullseye_x - 50, bullseye_y - 50, 100, 100);
+    //canvas.stroke();
+
+    // seat square
+    //canvas.strokeStyle = "#FF0000";
+    //canvas.rect (bullseye_x - 70, bullseye_y - 70, 140, 140);
+    //canvas.stroke();
+
+    // tank square
+    //canvas.strokeStyle = "#FF0000";
+    //canvas.rect (160 - 85, 135 - 85, 170, 170);
+    //canvas.stroke();
+
+    for (var d = 0; d < total_drops_in_array; d += 1)
+      {
+      if (piss_drop[d].check_active()) piss_drop[d].draw();
+      }
+
+    // notification text
+    if (notification.check_active() == true) notification.draw();
+      
+         if (level_result == "great job") result_greatjob.draw (canvas, 5, 110);
+    else if (level_result == "way to go") result_waytogo.draw  (canvas, 5, 110);
+    else if (level_result == "uh")        result_uh.draw       (canvas, 5, 110);
+    else if (level_result == "hygenic")   result_hygenic.draw  (canvas, 5, 110);
+    }
+  if (fade_direction != "none")
+    {
+    canvas.globalAlpha = fade_opacity;
+    black_sprite.draw (canvas, 0, 0);
+    canvas.globalAlpha = 1.0;
+    }
+  }
+
+////////////////////////////////////////////////////////////////////////////////
+
+//function mouse_down ()
+//  {
+//  if (game_state == "title")
+//     {
+//     fade_direction = "out";
+//     }
+//  else if (game_state == "beer")
+//    {
+//    game_state = "game";
+//    if (piss_start == false) piss_start = true;
+//    }
+//  else if (game_state == "game")
+//    {
+//    mouse_move();
+//    }
+//  pointer_down = true;  
+     
+  //mouse_move();
+//  }
+ 
+////////////////////////////////////////////////////////////////////////////////
+ 
+//function mouse_move (e)
+//  {
+//  if (!e)
+//    var e = event;
+//  main_target_x = e.pageX - canvas.offsetLeft;
+//  main_target_y = e.pageY - canvas.offsetTop;
+  //showPos();
+//  }
+
+////////////////////////////////////////////////////////////////////////////////
+
+//function mouse_up ()
+//  {
+//  pointer_down = false;
+//  mouse_move();
+//  }
+ 
+////////////////////////////////////////////////////////////////////////////////
+
+//function finger_down ()
+//  {
+//  if (game_state == "title")
+//     {
+//     fade_direction = "out";
+//     }
+//  else if (game_state == "beer")
+//    {
+//    game_state = "game";
+//    if (piss_start == false) piss_start = true;
+//    }
+//  else if (game_state == "game")
+//    {
+//    mouse_move();
+//    }
+//  pointer_down = true;  
+     
+  //mouse_move();
+//  }
+ 
+////////////////////////////////////////////////////////////////////////////////
+
+//function finger_move (e)
+//  {
+//  if (!e) var e = event;
+//  e.preventDefault();
+//  main_target_x = e.targetTouches[0].pageX - canvas.offsetLeft;
+//  main_target_y = e.targetTouches[0].pageY - canvas.offsetTop;
+//  //showPos();
+//  }
+        
+////////////////////////////////////////////////////////////////////////////////
+
+//function finger_up ()
+//  {
+//  pointer_down = false;
+//  // no touch to track, so just show state
+//  //showPos();
+//  }
+ 
+////////////////////////////////////////////////////////////////////////////////
+
+$(document).ready (function()
+  {
+  $("canvas").mousedown (function()
+    {
+    if (game_state == "title")
+      {
+      fade_direction = "out";
+      //game_state = "beer";
+      //next_level();
+      }
+    else if (game_state == "beer")
+      {
+      game_state = "game";
+      if (piss_start == false) piss_start = true;
+      }
+    else if (game_state == "game")
+      {
+      main_target_x = event.pageX - this.offsetLeft;
+      main_target_y = event.pageY - this.offsetTop;
+      }
+    pointer_down = true;
+    });
+
+  $("canvas").mouseup (function()
+    {
+    pointer_down = false;
+    });
+    
+  $("canvas").mousemove (function (event)
+    {
+    main_target_x = event.pageX - this.offsetLeft;
+    main_target_y = event.pageY - this.offsetTop;
+    //$("#span1").text(event.pageX + ", " + event.pageY);
+    //$("#span2").text(main_target_x + ", " + main_target_y);
+    //$("#span1").text (total_piss_on_seat);
+    });
+  });
+
+</script>
+</body>
+</html>

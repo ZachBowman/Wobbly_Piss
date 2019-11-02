@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title>CreateJS Example: Space Rocks Game</title>
+		
+<script type="text/javascript" src="sounds/preloadjs-NEXT.min.js"></script>
+<script type="text/javascript" src="sounds/soundjs-NEXT.min.js"></script>
+
+<script>
+
+var canvas;			//Main canvas
+var preload;
+var fps = 30;
+var sound_counter = 0;
+var sound_delay = 90;
+
+////////////////////////////////////////////////////////////////////////////////
+
+setInterval (function()
+  {
+  update();
+  }, 1000/fps);
+
+////////////////////////////////////////////////////////////////////////////////
+
+function init()
+  {
+  if (!createjs.Sound.initializeDefaultPlugins())
+    {
+    document.getElementById("content").style.display = "none";
+    return;
+    }
+
+  canvas = document.getElementById ("gameCanvas");
+
+	//var manifest = [{id:"begin", src:"sounds/mmhmm1.mp3"},
+	//	              {id:"break", src:"sounds/water_hit1.mp3", data:6}];
+	var manifest = [{id:"begin", src:"sounds/Game-Spawn.mp3|sounds/Game-Spawn.ogg"},
+		              {id:"break", src:"sounds/Game-Break.mp3|sounds/Game-Break.ogg", data:6}];
+
+  preload = new createjs.LoadQueue();
+  preload.installPlugin(createjs.Sound);
+	preload.addEventListener("complete", doneLoading); // add an event listener for when load is completed
+  preload.loadManifest (manifest);
+	}
+
+function stop()
+  {
+	//if (preload != null) {preload.close();}
+	//createjs.Sound.stop();
+  }
+
+function doneLoading(event)
+  {
+	canvas.onclick = handleClick;
+  }
+
+function handleClick()
+  {
+	canvas.onclick = null;
+	createjs.Sound.play("begin");
+	}
+
+////////////////////////////////////////////////////////////////////////////////
+
+function update ()
+  {
+  sound_counter += 1;
+  if (sound_counter >= sound_delay)
+    {
+    sound_counter = 0;
+    createjs.Sound.play ("break");   
+    }
+  }
+
+////////////////////////////////////////////////////////////////////////////////
+
+	</script>
+
+	<link rel="stylesheet" type="text/css" href="assets/demoStyles.css" />
+	<style type="text/css">
+		#content {
+			background-color:#000000;
+		}
+	</style>
+</head>
+
+<body onload="init();">
+
+	<div id="content">
+		<canvas id="gameCanvas" width="960" height="600"></canvas>
+	</div>
+
+</body>
+</html>
